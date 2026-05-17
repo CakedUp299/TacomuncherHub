@@ -1,0 +1,290 @@
+-- roblox services (dont touch)
+local p = game:GetService("Players")
+local r = game:GetService("RunService")
+local u = game:GetService("UserInputService")
+local c = workspace.CurrentCamera
+local RF = game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunctions")
+
+-- Get Character (fixes respawn issues, dont touch)
+local function getChar()
+   return p.LocalPlayer.Character or p.LocalPlayer.CharacterAdded:Wait()
+end
+
+-- aimbot settings (dont touch)
+local a=false local f=false local fv=false local fr=70 local t=workspace:FindFirstChild("Zombies")
+
+-- disable startup toggles (don't touch)
+local ShotgunOn=false
+local HeavyOn=false
+local LandOn=false
+local ToxicOn=false
+local TripOn=false
+
+-- ui dont touch
+local Rayfield=loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local w=Rayfield:CreateWindow({
+   Name="The Final Stand 2",
+   LoadingTitle="Tacomuncher Hub",
+   LoadingSubtitle="by Tacomuncher255",
+   Theme="Default",
+   ToggleUIKeybind="K"
+})
+
+local AimTab=w:CreateTab("Aimbot",4483362458)
+local DeployTab=w:CreateTab("Deploy",4483362458)
+local MiscTab = w:CreateTab("Misc", 4483362458)
+
+-- Aimbot (don't touch)
+local circle=Drawing.new("Circle")
+circle.Thickness=2
+circle.NumSides=100
+circle.Filled=false
+
+AimTab:CreateToggle({Name="Enable Aimbot",Callback=function(v)a=v end})
+AimTab:CreateToggle({Name="Use FOV",Callback=function(v)f=v end})
+AimTab:CreateToggle({Name="Show FOV",Callback=function(v)fv=v end})
+AimTab:CreateSlider({Name="FOV Size",Range={20,300},Increment=5,CurrentValue=70,Callback=function(v)fr=v end})
+
+r.RenderStepped:Connect(function()
+   circle.Position=Vector2.new(c.ViewportSize.X/2,c.ViewportSize.Y/2)
+   circle.Radius=fr
+   circle.Visible=fv
+
+   if not a or not t then return end
+
+   local cl,dist=nil,(f and fr or math.huge)
+
+   for _,v in ipairs(t:GetChildren()) do
+      local h=v:FindFirstChild("Head")
+      if h then
+         local s,on=c:WorldToViewportPoint(h.Position)
+         local m=(f and on)
+            and (Vector2.new(s.X,s.Y)-circle.Position).Magnitude
+            or (h.Position-c.CFrame.Position).Magnitude
+
+         if m<dist then
+            dist=m
+            cl=h
+         end
+      end
+   end
+
+   if cl then
+      c.CFrame=CFrame.new(c.CFrame.Position,cl.Position)
+   end
+end)
+
+u.InputBegan:Connect(function(i,g)
+   if not g and i.KeyCode==Enum.KeyCode.L then
+      a=not a
+   end
+end)
+
+-- deployable coords (do NOT fuck with this unless yk wat ur doing)
+
+local ShotgunTurrets = {
+   CFrame.new(-4.4686,0.75,-292.6738, -0.9987,0,0.0512,0,1,0,-0.0512,0,-0.9987),
+   CFrame.new(11.0187,0.75,-292.7944, -0.99986,0,0.01666,0,1,0,-0.01666,0,-0.99986),
+   CFrame.new(-7.1493,0.75,-283.0636, -0.9987,0,0.0512,0,1,0,-0.0512,0,-0.9987)
+}
+
+local HeavySentry = CFrame.new(0.0426,0.7002,-286.1710, 0.99875,0,0.04994,0,1,0,-0.04994,0,0.99875)
+
+local LandMines = {
+   CFrame.new(28.3277,0.6,-248.8220),
+   CFrame.new(18.0428,0.6,-249.2170),
+   CFrame.new(7.3294,0.6,-249.0266),
+   CFrame.new(-4.2597,0.6,-248.8206),
+   CFrame.new(-12.8457,0.6,-248.4975),
+   CFrame.new(-20.6625,0.6,-248.0382),
+   CFrame.new(-28.8906,0.6,-247.5547),
+   CFrame.new(0.1401,0.6,-249.1621)
+}
+
+local ToxicMines = {
+   CFrame.new(40.6465,0.55,-244.2096),
+   CFrame.new(35.2899,0.55,-244.1143),
+   CFrame.new(28.8516,0.55,-243.9997),
+   CFrame.new(22.8769,0.55,-243.8934),
+   CFrame.new(17.9323,0.55,-243.8055),
+   CFrame.new(12.3696,0.55,-243.7065),
+   CFrame.new(5.9312,0.55,-243.5919),
+   CFrame.new(0.5745,0.55,-243.4966)
+}
+
+local TripMines = {
+   CFrame.new(18.0779,0.75,-239.2985),
+   CFrame.new(9.4444,0.75,-239.2855),
+   CFrame.new(0.5793,0.75,-238.9828),
+   CFrame.new(-27.9602,0.75,-237.7302),
+   CFrame.new(-21.5753,0.75,-237.9251),
+   CFrame.new(-15.2419,0.75,-238.1184),
+   CFrame.new(-9.2690,0.75,-238.3007),
+   CFrame.new(-3.3475,0.75,-238.4814)
+}
+
+local function place(name,list,extra)
+   for _,cf in ipairs(list) do
+      RF.CreateDeployable:InvokeServer(name,cf,extra)
+   end
+end
+
+-- deploy toggles (dont touch I'll add more later)
+
+DeployTab:CreateToggle({
+   Name="Shotgun Turrets",
+   Callback=function(v)
+      ShotgunOn=v
+      task.spawn(function()
+         while ShotgunOn do
+            for _,cf in ipairs(ShotgunTurrets) do
+               RF.CreateDeployable:InvokeServer("Shotgun Turret",cf,"Close")
+            end
+            task.wait(5)
+         end
+      end)
+   end
+})
+
+DeployTab:CreateToggle({
+   Name="Heavy Sentry",
+   Callback=function(v)
+      HeavyOn=v
+      task.spawn(function()
+         while HeavyOn do
+            RF.CreateDeployable:InvokeServer("Heavy Sentry",HeavySentry,"Close")
+            task.wait(5)
+         end
+      end)
+   end
+})
+
+DeployTab:CreateToggle({
+   Name="Landmines",
+   Callback=function(v)
+      LandOn=v
+      task.spawn(function()
+         while LandOn do
+            place("Landmine",LandMines,false)
+            task.wait(5)
+         end
+      end)
+   end
+})
+
+DeployTab:CreateToggle({
+   Name="Toxic Mines",
+   Callback=function(v)
+      ToxicOn=v
+      task.spawn(function()
+         while ToxicOn do
+            place("Toxic Mine",ToxicMines,false)
+            task.wait(5)
+         end
+      end)
+   end
+})
+
+DeployTab:CreateToggle({
+   Name="Trip Mines",
+   Callback=function(v)
+      TripOn=v
+      task.spawn(function()
+         while TripOn do
+            place("Trip Mine",TripMines,false)
+            task.wait(5)
+         end
+      end)
+   end
+})
+
+-- misc tabs 
+
+-- auto vote skip 
+local skipLoop=false
+MiscTab:CreateToggle({
+   Name="Auto Vote Skip",
+   Callback=function(v)
+      skipLoop=v
+      task.spawn(function()
+         while skipLoop do
+            game:GetService("ReplicatedStorage")
+            :WaitForChild("RemoteFunctions")
+            :WaitForChild("VoteSkip")
+            :InvokeServer()
+            task.wait(1)
+         end
+      end)
+   end
+})
+
+-- anti afk (don't fuck with this or it will bug)
+local VU = game:GetService("VirtualUser")
+local antiAfk=false
+
+p.LocalPlayer.Idled:Connect(function()
+   if antiAfk then
+      VU:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+      task.wait(1)
+      VU:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+   end
+end)
+
+MiscTab:CreateToggle({
+   Name="Anti AFK",
+   Callback=function(v)
+      antiAfk=v
+   end
+})
+
+-- auto walk to spawn door (DO NOT TOUCH THIS SHIT NO MATTER WHAT)
+local walking=false
+local targetPos=Vector3.new(34.1444511, 4.5400238, -360.722107)
+
+MiscTab:CreateToggle({
+   Name="Auto Walk To Door",
+   Callback=function(v)
+      walking=v
+
+      if v then
+         task.spawn(function()
+            while walking do
+               local char=getChar()
+               local hum=char:FindFirstChildOfClass("Humanoid")
+
+               if hum then
+                  for i=1,10 do
+                     if not walking then break end
+                     hum:MoveTo(targetPos)
+                     task.wait(0.1)
+                  end
+               end
+
+               task.wait(0.1)
+            end
+         end)
+      end
+   end
+})
+
+-- Auto press F (for door) Only change keybind if needed
+local pressingF = false
+
+MiscTab:CreateToggle({
+    Name = "Auto Interact (F)",
+    CurrentValue = false,
+    Callback = function(v)
+        pressingF = v
+        if pressingF then
+            task.spawn(function()
+                while pressingF do
+                    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                    task.wait(0.1) -- << dont touch this
+                    game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                    task.wait(1) -- delay (default 1 sec)
+                end
+            end)
+        end
+    end
+})
+
