@@ -35,6 +35,7 @@ local DeployTab=w:CreateTab("Deploy",4483362458)
 local MiscTab = w:CreateTab("Misc", 4483362458)
 
 -- Aimbot (don't touch)
+-- Aimbot (don't touch)
 local circle=Drawing.new("Circle")
 circle.Thickness=2
 circle.NumSides=100
@@ -45,9 +46,9 @@ AimTab:CreateToggle({Name="Use FOV",Callback=function(v)f=v end})
 AimTab:CreateToggle({Name="Show FOV",Callback=function(v)fv=v end})
 AimTab:CreateSlider({Name="FOV Size",Range={20,300},Increment=5,CurrentValue=70,Callback=function(v)fr=v end})
 
---aimbot dont touch
+-- bounty toggle 
 AimTab:CreateToggle({
-   Name = "Bounty Zombies Only",
+   Name = "Target Bounty",
    Callback = function(v)
       bountyOnly = v
    end
@@ -60,17 +61,26 @@ r.RenderStepped:Connect(function()
 
    if not a or not t then return end
 
-   local cl,dist=nil,(f and fr or math.huge)
+   local cl = nil
 
-   -- loop
+   -- bounty detection
+   local bountyTarget = nil
+   local normalTarget = nil
+   local bountyDist = (f and fr or math.huge)
+   local normalDist = (f and fr or math.huge)
+
    for _,v in ipairs(t:GetChildren()) do
       local h = v:FindFirstChild("Head")
-
       if h then
-         -- bounty checks
-         if bountyOnly then
-            local attr = v:FindFirstChild("HighlightAttributes")
+         local s,on=c:WorldToViewportPoint(h.Position)
+         local m=(f and on)
+            and (Vector2.new(s.X,s.Y)-circle.Position).Magnitude
+            or (h.Position-c.CFrame.Position).Magnitude
+
+         if m < (f and fr or math.huge) then
+            -- check bounty
             local isBounty = false
+            local attr = v:FindFirstChild("HighlightAttributes")
 
             if attr then
                for _, value in pairs(attr:GetAttributes()) do
@@ -81,20 +91,23 @@ r.RenderStepped:Connect(function()
                end
             end
 
-            if not isBounty then continue end
-         end
-
-         local s,on=c:WorldToViewportPoint(h.Position)
-         local m=(f and on)
-            and (Vector2.new(s.X,s.Y)-circle.Position).Magnitude
-            or (h.Position-c.CFrame.Position).Magnitude
-
-         if m<dist then
-            dist=m
-            cl=h
+            if bountyOnly and isBounty then
+               if m < bountyDist then
+                  bountyDist = m
+                  bountyTarget = h
+               end
+            else
+               if m < normalDist then
+                  normalDist = m
+                  normalTarget = h
+               end
+            end
          end
       end
    end
+
+   -- bounty prio. funcs
+   cl = bountyTarget or normalTarget
 
    if cl then
       c.CFrame=CFrame.new(c.CFrame.Position,cl.Position)
@@ -102,7 +115,7 @@ r.RenderStepped:Connect(function()
 end)
 
 u.InputBegan:Connect(function(i,g)
-   if not g and i.KeyCode==Enum.KeyCode.x then
+   if not g and i.KeyCode==Enum.KeyCode.L then
       a=not a
    end
 end)
