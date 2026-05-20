@@ -45,6 +45,14 @@ AimTab:CreateToggle({Name="Use FOV",Callback=function(v)f=v end})
 AimTab:CreateToggle({Name="Show FOV",Callback=function(v)fv=v end})
 AimTab:CreateSlider({Name="FOV Size",Range={20,300},Increment=5,CurrentValue=70,Callback=function(v)fr=v end})
 
+--aimbot dont touch
+AimTab:CreateToggle({
+   Name = "Bounty Zombies Only",
+   Callback = function(v)
+      bountyOnly = v
+   end
+})
+
 r.RenderStepped:Connect(function()
    circle.Position=Vector2.new(c.ViewportSize.X/2,c.ViewportSize.Y/2)
    circle.Radius=fr
@@ -54,9 +62,28 @@ r.RenderStepped:Connect(function()
 
    local cl,dist=nil,(f and fr or math.huge)
 
+   -- loop
    for _,v in ipairs(t:GetChildren()) do
-      local h=v:FindFirstChild("Head")
+      local h = v:FindFirstChild("Head")
+
       if h then
+         -- bounty checks
+         if bountyOnly then
+            local attr = v:FindFirstChild("HighlightAttributes")
+            local isBounty = false
+
+            if attr then
+               for _, value in pairs(attr:GetAttributes()) do
+                  if typeof(value) == "number" and value > 1000000000 then
+                     isBounty = true
+                     break
+                  end
+               end
+            end
+
+            if not isBounty then continue end
+         end
+
          local s,on=c:WorldToViewportPoint(h.Position)
          local m=(f and on)
             and (Vector2.new(s.X,s.Y)-circle.Position).Magnitude
@@ -75,7 +102,7 @@ r.RenderStepped:Connect(function()
 end)
 
 u.InputBegan:Connect(function(i,g)
-   if not g and i.KeyCode==Enum.KeyCode.L then
+   if not g and i.KeyCode==Enum.KeyCode.x then
       a=not a
    end
 end)
